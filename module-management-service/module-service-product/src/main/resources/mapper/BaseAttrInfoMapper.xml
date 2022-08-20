@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.atguigu.gmall.product.mapper.BaseAttrInfoMapper">
+
+    <resultMap id="baseAttrInfoResultMap" type="com.atguigu.gmall.model.product.BaseAttrInfo">
+        <id column="id" property="id"></id>
+        <result column="category_id" property="categoryId"/>
+        <result property="attrName" column="attr_name"/>
+        <result property="categoryLevel" column="category_level"/>
+        <collection property="attrValueList" ofType="com.atguigu.gmall.model.product.BaseAttrValue">
+            <!-- 注意点二：这里bav.id一定要起别名，不然会被当做bai.id -->
+            <id property="id" column="bav_id"/>  <!--犯过的错误:<id property="id" column="id"/>-->
+            <result property="valueName" column="value_name"/>
+            <result property="attrId" column="attr_id"/>
+        </collection>
+    </resultMap>
+
+    <!-- 注意点一：为了后续功能开发可以复用代码，我们这里不仅查询平台属性，还查询关联的平台属性值 -->
+    <!-- 注意点二：这里bav.id一定要起别名，不然会被当做bai.id -->
+    <!-- 注意点三：连接条件一定要去关联bav.attr_id，这里不要搞错 -->
+    <!-- 注意点四：为了便于显示，最后执行排序 -->
+    <select id="selectBaseAttrInfoList" resultMap="baseAttrInfoResultMap">
+        select bai.id, attr_name, category_level, category_id,bav.id bav_id, value_name, attr_id
+        from gmall_product.base_attr_info bai
+        inner join gmall_product.base_attr_value bav
+        on bai.id = bav.attr_id
+        <where>
+            <if test="category1Id != null and category1Id != 0">
+                or (category_id=#{category1Id} and category_level=1)
+            </if>
+            <if test="category2Id != null and category2Id != 0">
+                or (category_id=#{category2Id} and category_level=2)
+            </if>
+            <if test="category3Id !=null and category3Id != 0">
+                or ( category_id=#{category3Id} and category_level=3)
+            </if>
+        </where>
+        order by bai.category_level, category_id;
+    </select>
+</mapper>

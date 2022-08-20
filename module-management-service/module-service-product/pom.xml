@@ -11,5 +11,11 @@
 
     <artifactId>module-service-product</artifactId>
 
-
+    <dependencies>
+        <!-- 分布式文件存储服务器FastDFS的Java客户端 -->
+        <dependency>
+            <groupId>net.oschina.zcx7878</groupId>
+            <artifactId>fastdfs-client-java</artifactId>
+        </dependency>
+    </dependencies>
 </project>
