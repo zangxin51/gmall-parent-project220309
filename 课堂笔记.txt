@@ -60,6 +60,184 @@ git clone https://gitee.com/heavy_code_industry/gmall-parent-project220309
 ●使用IDEA打开
 ●针对当前project设置Maven核心程序和本地库地址
 
+一、平台属性
+1、概念
+
+2、开发流程套路
+[1]宏观：流程图
+当前功能包含哪些组件；
+各个组件如何对接。
+
+[2]微观：模块内部
+●搭环境
+●实体类：entity
+●持久化层：mapper接口
+●业务逻辑层：service接口
+●业务逻辑层：service实现
+●控制层：Controller
+
+[3]组装
+把当前功能涉及的各个模块对接到一起
+
+[4]调试
+
+3、小知识点
+@RestController = @ResponseBody + @Controller
+@RequestMapping注解写在类上相当于给每一个方法前面都附加了这个前缀
+AOP切面套用到类上：
+	有接口：底层用动态代理实现 ---> 放入 IOC 容器的就是代理对象
+	没接口：底层用cglib实现
+Service应用声明式事务之后，就会被应用事务切面。
+
+    @Autowired
+    private ManagerService managerService;
+
+	到IOC容器中查询ManagerService类型的bean
+		情况一：有切面
+			IOC容器里实际上存放的是接口的代理对象，而不是实现类的对象
+			代理对象的类型是类似：$Proxy6，由动态代理技术动态生成的
+			$Proxy6实现了接口，但是没有继承ManagerServiceImpl类
+			此时根据实现类类型去找是找不到的。
+			所以下面的写法是错的：
+			    @Autowired
+				private ManagerServiceImpl managerService;
+		情况二：没切面
+
+4、查询平台属性的SQL语句分析
+<!--
+	resultMap标签：
+		功能1：定义SQL查询出来的字段和Java实体类属性之间的映射关系
+			id标签或result标签
+				column属性：数据库表中的字段（如果SQL语句指定了别名，那么这里就是那个别名）
+				property属性：和数据库表字段对应的Java实体类属性名（getXxx()、setXxx()方法定义的属性）
+		功能2：映射关联关系
+			对一关联关系
+				association标签：总体配置对一关联关系
+					javaType属性：指定关联关系中一的一端的类型（全类名）
+			对多关联关系
+				一的一端：平台属性BaseAttrInfo
+				多的一端：平台属性值BaseAttrValue
+				collection标签：总体配置对多关联关系
+					property属性：在BaseAttrInfo实体类中存储BaseAttrValue的List集合的属性
+					ofType属性：集合中元素的全类名（多的一端的实体类）
+ -->
+<resultMap id="baseAttrInfoResultMap" type="com.atguigu.gmall.model.product.BaseAttrInfo">
+    <id column="id" property="id"/>
+    <result column="attr_name" property="attrName"/>
+    <result column="category_id" property="categoryId"/>
+    <result column="category_level" property="categoryLevel"/>
+    <collection property="attrValueList" ofType="com.atguigu.gmall.model.product.BaseAttrValue">
+        <id column="bav_id" property="id"/>
+        <result column="value_name" property="valueName"/>
+        <result column="attr_id" property="attrId"/>
+    </collection>
+</resultMap>
+
+<!--
+	要查询的字段：
+		bai.id：平台属性id
+		attr_name：平台属性名
+		category_id：平台属性所属分类
+		category_level：平台属性所属分类级别
+		bav.id：平台属性值id
+		value_name：平台属性值
+		attr_id：平台属性值所属的平台属性名
+	表之间的关联：
+		base_attr_info bai 和 base_attr_value bav 进行了内连接
+		使用内连接：两个表都只读取符合连接条件的数据，避免加载到不规范数据
+		连接条件：bai.id=bav.attr_id
+	查询条件说明：
+		前端页面发过来的请求包含三种情况
+			[1]只有一级分类，二级分类是0（表示未指定），三级分类是0（表示未指定）
+			[2]有一级分类和二级分类，三级分类是0（表示未指定）
+			[3]有一级分类、二级分类、三级分类
+		我们为了合并重复、冗余的代码，可以在一条SQL语句中适配这三种情况。
+		每一个参数值都判断它是否有效，下面两种情况都算无效：
+			为null
+			为0
+		当参数值无效时，就不放入查询条件（where子句）
+	where标签：
+		功能1：很聪明的生成where关键词，如果所有查询条件都不出现，那么where关键词也不出现
+		功能2：去除多余的or或and（但需要注意：只能针对最左边多余的or或and去除，对最右边的无效）
+	if标签：
+		执行条件判断的表达式，看某个SQL语句的片段是否拼到最终的SQL语句中。
+		test属性中指定条件判断表达式，条件表达式中的and表示且的意思
+-->
+<select id="selectBaseAttrInfoList" resultMap="baseAttrInfoResultMap">
+    <!-- 注意点一：为了后续功能开发可以复用代码，我们这里不仅查询平台属性，还查询关联的平台属性值 -->
+    <!-- 注意点二：这里bav.id一定要起别名，不然会被当做bai.id -->
+    <!-- 注意点三：连接条件一定要去关联bav.attr_id，这里不要搞错 -->
+    <!-- 注意点四：为了便于显示，最后执行排序 -->
+    select bai.id,attr_name,category_id,category_level,bav.id bav_id,value_name,attr_id
+    from gmall_product.base_attr_info bai inner join gmall_product.base_attr_value bav on bai.id=bav.attr_id
+    <where>
+        <if test="category1Id != null and category1Id != 0">or (category_id=#{category1Id} and category_level=1)</if>
+        <if test="category2Id != null and category2Id != 0">or (category_id=#{category2Id} and category_level=2)</if>
+        <if test="category3Id != null and category3Id != 0">or (category_id=#{category3Id} and category_level=3)</if>
+    </where>
+    order by bai.category_level,bai.id
+</select>
+
+5、添加平台属性功能分析
+[1]用户在界面上的操作
+	●添加平台属性必须知道这个新的平台属性添加到哪一个分类下
+	●指定属性名
+		○设定属性值
+		○设定属性值
+		○设定属性值
+		……
+	●点击保存
+
+[2]执行保存时需要注意的点
+	●必须先保存平台属性，得到自增id，才能保存平台属性值
+	●平台属性值是多个值，所以我们进行批量保存，效率高
+
+[3]接收前端数据
+@PostMapping("/saveAttrInfo")
+public Result<Void> saveAttrInfo(
+        // @RequestBody：接收请求体发送过来的 JSON 数据
+        @RequestBody BaseAttrInfo baseAttrInfo) {
+
+    managerService.saveBaseAttrInfo(baseAttrInfo);
+
+    return Result.ok();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
