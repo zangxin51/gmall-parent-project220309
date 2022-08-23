@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.atguigu.gmall.product.mapper.SpuSaleAttrValueMapper">
+    <insert id="batchInsert">
+        insert into spu_sale_attr_value(spu_id,base_sale_attr_id,sale_attr_value_name,sale_attr_name)
+        values
+        <foreach collection="spuSaleAttrValueList" item="spuSaleAttrValue" separator=",">
+            (#{spuInfoId},#{baseSaleAttrId},#{spuSaleAttrValue.saleAttrValueName},#{saleAttrName})
+        </foreach>
+    </insert>
+
+</mapper>

@@ -1,6 +1,7 @@
 package com.atguigu.gmall.product.service.api;
 
 import com.atguigu.gmall.model.product.*;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 
 import java.util.List;
 
@@ -23,4 +24,11 @@ public interface ManagerService {
     void saveAttrInfo(BaseAttrInfo baseAttrInfo);
 
     List<BaseAttrValue> getBaseAttrValueList(Long attrId);
+
+    IPage<SpuInfo> getPage(Long pageNum, Long pageSize, Long category3Id);
+
+    List<BaseSaleAttr> getAllBaseSaleAttr();
+
+    void saveSpuInfo(SpuInfo spuInfo);
+
 }

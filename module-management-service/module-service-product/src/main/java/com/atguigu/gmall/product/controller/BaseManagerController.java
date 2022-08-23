@@ -3,6 +3,7 @@ package com.atguigu.gmall.product.controller;
 import com.atguigu.gmall.common.result.Result;
 import com.atguigu.gmall.model.product.*;
 import com.atguigu.gmall.product.service.api.ManagerService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import java.util.List;
 @Api(tags = "商品属性接口")
 @RestController
 @RequestMapping("/admin/product")
+//@CrossOrigin
 public class BaseManagerController {
 
     @Autowired
@@ -129,5 +131,14 @@ public class BaseManagerController {
             result.setMessage(e.getMessage());
         }
         return result;
+    }
+
+    @GetMapping("/{page}/{limit}")
+    public Result<IPage<SpuInfo>> getPage(@PathVariable Long page,
+                                          @PathVariable Long limit,
+                                          @RequestParam Long category3Id){
+        IPage<SpuInfo> page1 = managerService.getPage(page, limit, category3Id);
+        return Result.ok(page1);
+
     }
 }
